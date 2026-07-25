@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using GameMode.Native;
 
 namespace GameMode.Services;
 
@@ -102,11 +103,11 @@ public class PlayniteService
 
     public bool IsConsoleModeActive()
     {
-        var foregroundPtr = GetForegroundWindow();
+        var foregroundPtr = User32.GetForegroundWindow();
         if (foregroundPtr == IntPtr.Zero)
             return false;
 
-        GetWindowThreadProcessId(foregroundPtr, out var pid);
+        User32.GetWindowThreadProcessId(foregroundPtr, out var pid);
 
         try
         {
@@ -129,10 +130,4 @@ public class PlayniteService
 
     [DllImport("user32.dll")]
     private static extern bool IsIconic(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 }

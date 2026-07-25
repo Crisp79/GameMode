@@ -42,6 +42,12 @@ if (config.DisconnectTimeoutSeconds < config.GracePeriodSeconds)
     config.DisconnectTimeoutSeconds = config.GracePeriodSeconds + 10;
 }
 
+if (config.DisconnectTimeoutSeconds > 3600)
+{
+    logger.Warn($"DisconnectTimeoutSeconds ({config.DisconnectTimeoutSeconds}) exceeds maximum (3600), capping at 3600");
+    config.DisconnectTimeoutSeconds = 3600;
+}
+
 var controllerService = new ControllerService();
 var playniteService = new PlayniteService(config.PlaynitePath, logger);
 var gameDetectionService = new GameDetectionService();
