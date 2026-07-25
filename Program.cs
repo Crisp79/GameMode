@@ -1,9 +1,18 @@
 using System.Text.Json;
 using System.Windows.Forms;
 using GameMode.Models;
+using GameMode.Native;
 using GameMode.Services;
 
 var configPath = Path.Combine(AppContext.BaseDirectory, "config.json");
+
+#if !DEBUG
+var debugMode = args.Contains("--debug");
+if (debugMode)
+    Kernel32.AllocConsole();
+#else
+const bool debugMode = true;
+#endif
 
 Config config;
 try
@@ -18,7 +27,7 @@ catch (Exception ex)
 }
 
 var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
-using var logger = new Logger(logDir, retentionDays: config.LogRetentionDays);
+using var logger = new Logger(logDir, retentionDays: config.LogRetentionDays, consoleEnabled: debugMode);
 
 logger.Info("GameMode initializing");
 

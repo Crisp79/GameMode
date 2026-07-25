@@ -4,12 +4,14 @@ public class Logger : IDisposable
 {
     private readonly string _logPath;
     private readonly bool _debugEnabled;
+    private readonly bool _consoleEnabled;
     private readonly StreamWriter? _writer;
     private readonly object _lock = new();
 
-    public Logger(string logDir, bool debugEnabled = false, int retentionDays = 7)
+    public Logger(string logDir, bool debugEnabled = false, int retentionDays = 7, bool consoleEnabled = true)
     {
         _debugEnabled = debugEnabled;
+        _consoleEnabled = consoleEnabled;
         Directory.CreateDirectory(logDir);
 
         CleanupOldLogs(logDir, retentionDays);
@@ -72,7 +74,8 @@ public class Logger : IDisposable
         var line = $"{DateTime.Now:HH:mm:ss} {level} {message}";
         lock (_lock)
         {
-            Console.WriteLine(line);
+            if (_consoleEnabled)
+                Console.WriteLine(line);
             _writer?.WriteLine(line);
         }
     }
