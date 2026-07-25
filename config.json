@@ -1,0 +1,8 @@
+{
+  "PlaynitePath": "D:\\Playnite\\Playnite.FullscreenApp.exe",
+  "CheckIntervalMs": 500,
+  "DisconnectTimeoutMinutes": 5,
+  "ClosePlaynite": true,
+  "BringToFront": true,
+  "HideCursor": false
+}
