@@ -4,19 +4,25 @@ namespace GameMode.Services;
 
 public class GameModeService
 {
+    private enum State { Idle, Connected, ConsoleActive, Gaming, GracePeriod, Countdown }
+
     private readonly ControllerService _controller;
     private readonly PlayniteService _playnite;
+    private readonly GameDetectionService _gameDetection;
     private readonly Logger _logger;
     private readonly Config _config;
 
-    private bool _playniteLaunched;
-    private DateTime? _disconnectTime;
+    private State _state = State.Idle;
+    private State _previousState;
+    private DateTime? _graceStart;
+    private DateTime? _countdownStart;
     private CancellationTokenSource? _cts;
 
-    public GameModeService(ControllerService controller, PlayniteService playnite, Logger logger, Config config)
+    public GameModeService(ControllerService controller, PlayniteService playnite, GameDetectionService gameDetection, Logger logger, Config config)
     {
         _controller = controller;
         _playnite = playnite;
+        _gameDetection = gameDetection;
         _logger = logger;
         _config = config;
     }
@@ -35,6 +41,7 @@ public class GameModeService
             while (!_cts.Token.IsCancellationRequested)
             {
                 _controller.Poll();
+                UpdateContext();
                 await Task.Delay(_config.CheckIntervalMs, _cts.Token);
             }
         }
@@ -57,70 +64,151 @@ public class GameModeService
 
     private void OnControllerConnected()
     {
-        _logger.Info("Controller Connected");
-
-        _disconnectTime = null;
-
-        if (_playniteLaunched)
+        if (_state is State.GracePeriod or State.Countdown)
         {
-            if (_playnite.IsMinimized())
-                _playnite.Restore();
-
-            if (_config.BringToFront)
-                _playnite.BringToFront();
-
+            _logger.Info("Controller reconnected");
+            _logger.Info("Disconnect timer cancelled");
+            _graceStart = null;
+            _countdownStart = null;
+            TransitionTo(_previousState);
             return;
         }
 
-        if (!_playnite.IsRunning())
-        {
-            _playnite.Launch();
-            _playniteLaunched = true;
-        }
-        else
-        {
-            if (_playnite.IsMinimized())
-                _playnite.Restore();
-
-            if (_config.BringToFront)
-                _playnite.BringToFront();
-
-            _playniteLaunched = true;
-        }
+        if (_state == State.Idle)
+            TransitionTo(State.Connected);
     }
 
     private void OnControllerDisconnected()
     {
-        _logger.Info("Controller Disconnected");
-        _disconnectTime = DateTime.UtcNow;
-        _ = StartDisconnectTimerAsync();
+        if (_state == State.Idle)
+            return;
+
+        _logger.Info("Controller disconnected");
+        _previousState = _state;
+        _graceStart = DateTime.UtcNow;
+        TransitionTo(State.GracePeriod);
     }
 
-    private async Task StartDisconnectTimerAsync()
+    private void UpdateContext()
     {
-        var timeout = TimeSpan.FromSeconds(_config.DisconnectTimeoutSeconds);
+        var consoleActive = _playnite.IsConsoleModeActive();
+        var gameRunning = _gameDetection.IsGameRunning();
 
-        while (_disconnectTime.HasValue && !_cts!.Token.IsCancellationRequested)
+        switch (_state)
         {
-            if (DateTime.UtcNow - _disconnectTime.Value >= timeout)
-            {
-                if (_config.ClosePlaynite && _playnite.IsRunning())
-                {
-                    _playnite.Close();
-                    _playniteLaunched = false;
-                }
-                _disconnectTime = null;
+            case State.Connected:
+                if (gameRunning)
+                    TransitionTo(State.Gaming);
+                else if (consoleActive)
+                    TransitionTo(State.ConsoleActive);
                 break;
-            }
 
-            try
-            {
-                await Task.Delay(1000, _cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
+            case State.ConsoleActive:
+                if (gameRunning)
+                    TransitionTo(State.Gaming);
+                else if (!consoleActive)
+                    TransitionTo(State.Connected);
                 break;
-            }
+
+            case State.Gaming:
+                if (!gameRunning)
+                    TransitionTo(consoleActive ? State.ConsoleActive : State.Connected);
+                break;
+
+            case State.GracePeriod:
+                if (_graceStart.HasValue && DateTime.UtcNow - _graceStart.Value >= TimeSpan.FromSeconds(_config.GracePeriodSeconds))
+                    HandleGracePeriodExpired();
+                break;
+
+            case State.Countdown:
+                if (_countdownStart.HasValue && DateTime.UtcNow - _countdownStart.Value >= TimeSpan.FromSeconds(_config.DisconnectTimeoutSeconds))
+                    HandleCountdownExpired();
+                break;
         }
     }
+
+    private void HandleGracePeriodExpired()
+    {
+        if (_playnite.IsConsoleModeActive() && !_gameDetection.IsGameRunning())
+        {
+            _logger.Info("Disconnect timer started");
+            _countdownStart = DateTime.UtcNow;
+            TransitionTo(State.Countdown);
+        }
+        else
+        {
+            _graceStart = null;
+            TransitionTo(State.Idle);
+        }
+    }
+
+    private void HandleCountdownExpired()
+    {
+        if (!_controller.IsConnected() && !_gameDetection.IsGameRunning())
+        {
+            if (_config.ClosePlaynite && _playnite.IsRunning())
+            {
+                _logger.Info("Closing Playnite");
+                _playnite.Close();
+            }
+        }
+
+        _countdownStart = null;
+        TransitionTo(State.Idle);
+    }
+
+    private void TransitionTo(State newState)
+    {
+        if (_state == newState)
+            return;
+
+        var oldState = _state;
+        _state = newState;
+
+        LogTransition(oldState, newState);
+
+        if (newState == State.Connected && oldState == State.Idle && !_playnite.IsRunning())
+            _playnite.Launch();
+
+        if (newState == State.ConsoleActive)
+        {
+            _logger.Info("Console Mode entered");
+            if (_config.BringToFront)
+            {
+                if (_playnite.IsMinimized())
+                    _playnite.Restore();
+                _playnite.BringToFront();
+            }
+        }
+
+        if (oldState == State.ConsoleActive && newState != State.ConsoleActive)
+            _logger.Info("Console Mode exited");
+
+        if (newState == State.Gaming)
+            _logger.Info("Game detected");
+
+        if (oldState == State.Gaming && newState != State.Gaming)
+            _logger.Info("Game exited");
+
+        if (newState == State.GracePeriod)
+            _logger.Info("Grace period started");
+    }
+
+    private void LogTransition(State from, State to)
+    {
+        var fromName = FormatStateName(from);
+        var toName = FormatStateName(to);
+        _logger.Info($"{fromName} → {toName}");
+    }
+
+    private static string FormatStateName(State s) => s switch
+    {
+        State.Idle => "Idle",
+        State.Connected => "ControllerConnected",
+        State.ConsoleActive => "BrowsingLibrary",
+        State.Gaming => "Gaming",
+        State.GracePeriod => "DisconnectGracePeriod",
+        State.Countdown => "DisconnectCountdown",
+        _ => s.ToString()
+    };
 }

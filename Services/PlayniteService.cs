@@ -100,6 +100,25 @@ public class PlayniteService
         return false;
     }
 
+    public bool IsConsoleModeActive()
+    {
+        var foregroundPtr = GetForegroundWindow();
+        if (foregroundPtr == IntPtr.Zero)
+            return false;
+
+        GetWindowThreadProcessId(foregroundPtr, out var pid);
+
+        try
+        {
+            var proc = Process.GetProcessById((int)pid);
+            return proc.ProcessName == ProcessName;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private const int SW_RESTORE = 9;
 
     [DllImport("user32.dll")]
@@ -110,4 +129,10 @@ public class PlayniteService
 
     [DllImport("user32.dll")]
     private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 }

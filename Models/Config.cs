@@ -19,6 +19,9 @@ public class Config
     [JsonPropertyName("BringToFront")]
     public bool BringToFront { get; set; } = true;
 
+    [JsonPropertyName("GracePeriodSeconds")]
+    public int GracePeriodSeconds { get; set; } = 2;
+
     [JsonPropertyName("HideCursor")]
     public bool HideCursor { get; set; } = false;
 }

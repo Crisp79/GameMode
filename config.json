@@ -4,5 +4,6 @@
   "DisconnectTimeoutSeconds": 30,
   "ClosePlaynite": true,
   "BringToFront": true,
-  "HideCursor": false
+  "HideCursor": false,
+  "GracePeriodSeconds": 2
 }

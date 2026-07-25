@@ -23,7 +23,8 @@ logger.Info("GameMode initializing");
 
 var controllerService = new ControllerService();
 var playniteService = new PlayniteService(config.PlaynitePath, logger);
-var gameModeService = new GameModeService(controllerService, playniteService, logger, config);
+var gameDetectionService = new GameDetectionService();
+var gameModeService = new GameModeService(controllerService, playniteService, gameDetectionService, logger, config);
 
 var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) =>
