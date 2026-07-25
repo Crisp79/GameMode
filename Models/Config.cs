@@ -19,6 +19,9 @@ public class Config
     [JsonPropertyName("BringToFront")]
     public bool BringToFront { get; set; } = true;
 
+    [JsonPropertyName("LogRetentionDays")]
+    public int LogRetentionDays { get; set; } = 7;
+
     [JsonPropertyName("GracePeriodSeconds")]
     public int GracePeriodSeconds { get; set; } = 2;
 

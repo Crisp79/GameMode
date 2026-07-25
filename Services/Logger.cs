@@ -7,11 +7,15 @@ public class Logger : IDisposable
     private readonly StreamWriter? _writer;
     private readonly object _lock = new();
 
-    public Logger(string logDir, bool debugEnabled = false)
+    public Logger(string logDir, bool debugEnabled = false, int retentionDays = 7)
     {
         _debugEnabled = debugEnabled;
         Directory.CreateDirectory(logDir);
-        _logPath = Path.Combine(logDir, "GameMode.log");
+
+        CleanupOldLogs(logDir, retentionDays);
+
+        var date = DateTime.Now.ToString("yyyy-MM-dd");
+        _logPath = Path.Combine(logDir, $"GameMode-{date}.log");
 
         try
         {
@@ -23,6 +27,22 @@ public class Logger : IDisposable
         catch
         {
             _writer = null;
+        }
+    }
+
+    private static void CleanupOldLogs(string logDir, int retentionDays)
+    {
+        try
+        {
+            var cutoff = DateTime.Now.AddDays(-retentionDays);
+            foreach (var file in Directory.GetFiles(logDir, "GameMode*.log"))
+            {
+                if (File.GetLastWriteTime(file) < cutoff)
+                    File.Delete(file);
+            }
+        }
+        catch
+        {
         }
     }
 

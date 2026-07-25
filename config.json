@@ -4,6 +4,7 @@
   "DisconnectTimeoutSeconds": 30,
   "ClosePlaynite": true,
   "BringToFront": true,
+  "LogRetentionDays": 7,
   "HideCursor": false,
   "GracePeriodSeconds": 2
 }

@@ -17,7 +17,7 @@ catch (Exception ex)
 }
 
 var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
-using var logger = new Logger(logDir);
+using var logger = new Logger(logDir, retentionDays: config.LogRetentionDays);
 
 logger.Info("GameMode initializing");
 
