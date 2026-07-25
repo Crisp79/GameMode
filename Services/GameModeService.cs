@@ -36,9 +36,9 @@ public class GameModeService
         _enabled = enabled;
         if (enabled)
         {
-            _state = _controller.IsConnected() ? State.Connected : State.Idle;
             _logger.Info("Game Mode resumed");
-            LogTransition(State.Idle, _state);
+            _state = State.Idle;
+            TransitionTo(_controller.IsConnected() ? State.Connected : State.Idle);
         }
         else
         {
