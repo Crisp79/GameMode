@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Windows.Forms;
 using GameMode.Models;
 using GameMode.Services;
 
@@ -53,16 +54,37 @@ var playniteService = new PlayniteService(config.PlaynitePath, logger);
 var gameDetectionService = new GameDetectionService();
 var gameModeService = new GameModeService(controllerService, playniteService, gameDetectionService, logger, config);
 
+ApplicationConfiguration.Initialize();
+
+using var tray = new TrayController(logDir);
 var cts = new CancellationTokenSource();
-Console.CancelKeyPress += (_, e) =>
+
+tray.QuitRequested += () =>
 {
-    e.Cancel = true;
     cts.Cancel();
+    Application.Exit();
 };
+
+tray.EnableToggled += () =>
+{
+    gameModeService.SetEnabled(tray.Enabled);
+    tray.ShowNotification("GameMode", tray.Enabled ? "Game Mode enabled" : "Game Mode disabled");
+};
+
+gameModeService.StateChanged += state => tray.UpdateState(state);
+controllerService.Connected += () => tray.UpdateController("Connected");
+controllerService.Disconnected += () => tray.UpdateController("Disconnected");
+
+tray.UpdateController(controllerService.IsConnected() ? "Connected" : "Disconnected");
+tray.UpdateState("Idle");
+
+var gameTask = Task.Run(() => gameModeService.RunAsync(cts.Token));
+
+Application.Run();
 
 try
 {
-    await gameModeService.RunAsync(cts.Token);
+    await gameTask;
 }
 catch (OperationCanceledException)
 {

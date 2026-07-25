@@ -17,6 +17,9 @@ public class GameModeService
     private DateTime? _graceStart;
     private DateTime? _countdownStart;
     private CancellationTokenSource? _cts;
+    private bool _enabled = true;
+
+    public event Action<string>? StateChanged;
 
     public GameModeService(ControllerService controller, PlayniteService playnite, GameDetectionService gameDetection, Logger logger, Config config)
     {
@@ -25,6 +28,22 @@ public class GameModeService
         _gameDetection = gameDetection;
         _logger = logger;
         _config = config;
+    }
+
+    public void SetEnabled(bool enabled)
+    {
+        if (_enabled == enabled) return;
+        _enabled = enabled;
+        if (enabled)
+        {
+            _state = _controller.IsConnected() ? State.Connected : State.Idle;
+            _logger.Info("Game Mode resumed");
+            LogTransition(State.Idle, _state);
+        }
+        else
+        {
+            _logger.Info("Game Mode paused");
+        }
     }
 
     public async Task RunAsync(CancellationToken cancellationToken)
@@ -64,6 +83,8 @@ public class GameModeService
 
     private void OnControllerConnected()
     {
+        if (!_enabled) return;
+
         if (_state is State.GracePeriod or State.Countdown)
         {
             _logger.Info("Controller reconnected");
@@ -80,6 +101,8 @@ public class GameModeService
 
     private void OnControllerDisconnected()
     {
+        if (!_enabled) return;
+
         if (_state == State.Idle)
             return;
 
@@ -91,6 +114,8 @@ public class GameModeService
 
     private void UpdateContext()
     {
+        if (!_enabled) return;
+
         var consoleActive = _playnite.IsConsoleModeActive();
         var gameRunning = _gameDetection.IsGameRunning();
 
@@ -219,6 +244,7 @@ public class GameModeService
         var fromName = FormatStateName(from);
         var toName = FormatStateName(to);
         _logger.Info($"{fromName} -> {toName}");
+        StateChanged?.Invoke(toName);
     }
 
     private static string FormatStateName(State s) => s switch
