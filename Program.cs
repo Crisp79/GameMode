@@ -65,7 +65,7 @@ var gameModeService = new GameModeService(controllerService, playniteService, ga
 
 ApplicationConfiguration.Initialize();
 
-using var tray = new TrayController(logDir);
+using var tray = new TrayController(logDir, logger, debugMode);
 var cts = new CancellationTokenSource();
 
 tray.QuitRequested += () =>

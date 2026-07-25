@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Windows.Forms;
+using GameMode.Native;
 
 namespace GameMode.Services;
 
@@ -9,27 +10,34 @@ public class TrayController : IDisposable
     private readonly ToolStripMenuItem _controllerItem;
     private readonly ToolStripMenuItem _stateItem;
     private readonly ToolStripMenuItem _toggleItem;
+    private readonly ToolStripMenuItem _debugItem;
     private readonly string _logDir;
+    private readonly Logger _logger;
     private bool _enabled = true;
+    private bool _consoleShown;
 
     public bool Enabled => _enabled;
 
     public event Action? EnableToggled;
     public event Action? QuitRequested;
 
-    public TrayController(string logDir)
+    public TrayController(string logDir, Logger logger, bool consoleShown)
     {
         _logDir = logDir;
+        _logger = logger;
+        _consoleShown = consoleShown;
 
         _controllerItem = new ToolStripMenuItem("Controller: Unknown") { Enabled = false };
         _stateItem = new ToolStripMenuItem("State: Unknown") { Enabled = false };
         _toggleItem = new ToolStripMenuItem("Disable Game Mode");
+        _debugItem = new ToolStripMenuItem(_consoleShown ? "Hide Console" : "Show Console");
 
         var logsItem = new ToolStripMenuItem("Open Logs");
         var settingsItem = new ToolStripMenuItem("Open Settings");
         var quitItem = new ToolStripMenuItem("Quit");
 
         _toggleItem.Click += (_, _) => Toggle();
+        _debugItem.Click += (_, _) => ToggleConsole();
         logsItem.Click += (_, _) => OpenInExplorer(_logDir);
         settingsItem.Click += (_, _) => OpenWithShell(Path.Combine(AppContext.BaseDirectory, "config.json"));
         quitItem.Click += (_, _) => Quit();
@@ -40,6 +48,7 @@ public class TrayController : IDisposable
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_toggleItem);
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(_debugItem);
         menu.Items.Add(logsItem);
         menu.Items.Add(settingsItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -52,6 +61,23 @@ public class TrayController : IDisposable
             ContextMenuStrip = menu,
             Visible = true
         };
+    }
+
+    private void ToggleConsole()
+    {
+        if (_consoleShown)
+        {
+            Kernel32.FreeConsole();
+            _consoleShown = false;
+            _debugItem.Text = "Show Console";
+        }
+        else
+        {
+            Kernel32.AllocConsole();
+            _consoleShown = true;
+            _debugItem.Text = "Hide Console";
+        }
+        _logger.SetConsoleEnabled(_consoleShown);
     }
 
     public void UpdateController(string status)

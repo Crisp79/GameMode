@@ -4,7 +4,7 @@ public class Logger : IDisposable
 {
     private readonly string _logPath;
     private readonly bool _debugEnabled;
-    private readonly bool _consoleEnabled;
+    private bool _consoleEnabled;
     private readonly StreamWriter? _writer;
     private readonly object _lock = new();
 
@@ -78,6 +78,11 @@ public class Logger : IDisposable
                 Console.WriteLine(line);
             _writer?.WriteLine(line);
         }
+    }
+
+    public void SetConsoleEnabled(bool enabled)
+    {
+        _consoleEnabled = enabled;
     }
 
     public void Dispose()
