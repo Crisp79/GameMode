@@ -31,6 +31,11 @@ public class Logger : IDisposable
         Write("INFO", message);
     }
 
+    public void Warn(string message)
+    {
+        Write("WARN", message);
+    }
+
     public void Error(string message)
     {
         Write("ERROR", message);

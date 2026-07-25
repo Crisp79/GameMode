@@ -21,6 +21,27 @@ using var logger = new Logger(logDir);
 
 logger.Info("GameMode initializing");
 
+if (!File.Exists(config.PlaynitePath))
+    logger.Warn($"PlaynitePath not found: {config.PlaynitePath}");
+
+if (config.CheckIntervalMs is < 100 or > 60000)
+{
+    logger.Warn($"CheckIntervalMs {config.CheckIntervalMs} out of range (100-60000), using default 500");
+    config.CheckIntervalMs = 500;
+}
+
+if (config.GracePeriodSeconds < 1)
+{
+    logger.Warn($"GracePeriodSeconds {config.GracePeriodSeconds} too low, using default 2");
+    config.GracePeriodSeconds = 2;
+}
+
+if (config.DisconnectTimeoutSeconds < config.GracePeriodSeconds)
+{
+    logger.Warn($"DisconnectTimeoutSeconds ({config.DisconnectTimeoutSeconds}) is less than GracePeriodSeconds ({config.GracePeriodSeconds}), adjusting to {config.GracePeriodSeconds + 10}");
+    config.DisconnectTimeoutSeconds = config.GracePeriodSeconds + 10;
+}
+
 var controllerService = new ControllerService();
 var playniteService = new PlayniteService(config.PlaynitePath, logger);
 var gameDetectionService = new GameDetectionService();

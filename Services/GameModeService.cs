@@ -144,13 +144,17 @@ public class GameModeService
 
     private void HandleCountdownExpired()
     {
-        if (!_controller.IsConnected() && !_gameDetection.IsGameRunning())
+        if (!_controller.IsConnected() && !_gameDetection.IsGameRunning() && _playnite.IsConsoleModeActive())
         {
             if (_config.ClosePlaynite && _playnite.IsRunning())
             {
                 _logger.Info("Closing Playnite");
                 _playnite.Close();
             }
+        }
+        else
+        {
+            _logger.Info("Disconnect timer cancelled — console mode lost or game running");
         }
 
         _countdownStart = null;
@@ -168,16 +172,32 @@ public class GameModeService
         LogTransition(oldState, newState);
 
         if (newState == State.Connected && oldState == State.Idle && !_playnite.IsRunning())
-            _playnite.Launch();
+        {
+            try
+            {
+                _playnite.Launch();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Failed to launch Playnite: {ex.Message}");
+            }
+        }
 
         if (newState == State.ConsoleActive)
         {
             _logger.Info("Console Mode entered");
             if (_config.BringToFront)
             {
-                if (_playnite.IsMinimized())
-                    _playnite.Restore();
-                _playnite.BringToFront();
+                try
+                {
+                    if (_playnite.IsMinimized())
+                        _playnite.Restore();
+                    _playnite.BringToFront();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"Failed to bring Playnite to front: {ex.Message}");
+                }
             }
         }
 
