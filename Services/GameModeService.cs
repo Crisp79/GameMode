@@ -198,7 +198,7 @@ public class GameModeService
     {
         var fromName = FormatStateName(from);
         var toName = FormatStateName(to);
-        _logger.Info($"{fromName} → {toName}");
+        _logger.Info($"{fromName} -> {toName}");
     }
 
     private static string FormatStateName(State s) => s switch
