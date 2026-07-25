@@ -11,7 +11,7 @@ public class Config
     public int CheckIntervalMs { get; set; } = 500;
 
     [JsonPropertyName("DisconnectTimeoutSeconds")]
-    public int DisconnectTimeoutSeconds { get; set; } = 300;
+    public int DisconnectTimeoutSeconds { get; set; } = 30;
 
     [JsonPropertyName("ClosePlaynite")]
     public bool ClosePlaynite { get; set; } = true;
