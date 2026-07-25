@@ -98,7 +98,7 @@ public class GameModeService
 
     private async Task StartDisconnectTimerAsync()
     {
-        var timeout = TimeSpan.FromMinutes(_config.DisconnectTimeoutMinutes);
+        var timeout = TimeSpan.FromSeconds(_config.DisconnectTimeoutSeconds);
 
         while (_disconnectTime.HasValue && !_cts!.Token.IsCancellationRequested)
         {

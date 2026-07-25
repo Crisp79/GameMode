@@ -10,8 +10,8 @@ public class Config
     [JsonPropertyName("CheckIntervalMs")]
     public int CheckIntervalMs { get; set; } = 500;
 
-    [JsonPropertyName("DisconnectTimeoutMinutes")]
-    public int DisconnectTimeoutMinutes { get; set; } = 5;
+    [JsonPropertyName("DisconnectTimeoutSeconds")]
+    public int DisconnectTimeoutSeconds { get; set; } = 300;
 
     [JsonPropertyName("ClosePlaynite")]
     public bool ClosePlaynite { get; set; } = true;
